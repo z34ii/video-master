@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1115" />
+  <title>视频库管理</title>
+  <style>
+    :root {
+      --bg: #0f1115;
+      --bg-elevated: #161a21;
+      --card: #1b2029;
+      --card-hover: #202633;
+      --border: #2a3140;
+      --text: #e6e8ee;
+      --text-muted: #9aa3b2;
+      --primary: #5b8cff;
+      --primary-hover: #4a7bf0;
+      --danger: #ff5c6c;
+      --gold: #ffd479;
+      --radius: 12px;
+      --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    button, input, select, textarea, .chip, .card, .tag, .crop-box, .crop-handle { touch-action: manipulation; }
+
+    /* 头部 */
+    .site-header {
+      position: sticky; top: 0; z-index: 20;
+      background: rgba(15, 17, 21, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-inner {
+      max-width: 1200px; margin: 0 auto; padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .brand-icon { font-size: 22px; }
+    .brand h1 { font-size: 18px; font-weight: 700; white-space: nowrap; }
+    .count { font-size: 12px; color: var(--text-muted); background: var(--bg-elevated);
+      border: 1px solid var(--border); padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+    .header-actions { display: flex; gap: 8px; }
+
+    .btn { border: none; cursor: pointer; font-size: 14px; font-weight: 600; padding: 9px 15px;
+      border-radius: 9px; transition: background .15s, color .15s, border-color .15s, transform .05s; white-space: nowrap; }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-ghost { background: transparent; color: var(--text-muted); }
+    .btn-ghost:hover { background: var(--bg-elevated); color: var(--text); }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+    .btn-sm { padding: 6px 11px; font-size: 13px; border-radius: 7px; }
+    .btn-danger { background: transparent; color: var(--danger); }
+    .btn-danger:hover { background: rgba(255, 92, 108, 0.12); }
+    .icon-btn { background: transparent; border: none; color: var(--text-muted); font-size: 18px;
+      cursor: pointer; padding: 4px 9px; border-radius: 6px; }
+    .icon-btn:hover { background: var(--bg-elevated); color: var(--text); }
+
+    /* 主体 */
+    .container { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+
+    .categories { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { cursor: pointer; padding: 7px 15px; border-radius: 999px; font-size: 14px;
+      background: var(--card); border: 1px solid var(--border); color: var(--text-muted);
+      transition: all .15s; user-select: none; }
+    .chip:hover { color: var(--text); border-color: #3a4252; }
+    .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .chip-muted { color: #6b7385; }
+
+    .toolbar-right { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 9px; padding: 8px 12px; }
+    .search-icon { font-size: 14px; opacity: .6; }
+    .search-box input { background: transparent; border: none; outline: none; color: var(--text);
+      font-size: 14px; width: 160px; }
+    .search-box input::placeholder { color: var(--text-muted); }
+    select.select {
+      background: var(--card); border: 1px solid var(--border); border-radius: 9px;
+      padding: 8px 12px; color: var(--text); font-size: 14px; outline: none; }
+    select.select:focus { border-color: var(--primary); }
+
+    /* 网格 */
+    .video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      overflow: hidden; display: flex; flex-direction: column; cursor: pointer;
+      transition: transform .15s, border-color .15s, box-shadow .15s; }
+    .card:hover { transform: translateY(-3px); border-color: #3a4252; box-shadow: var(--shadow); background: var(--card-hover); }
+    .card-cover { aspect-ratio: 16 / 10; background: #10131a; display: flex; align-items: center;
+      justify-content: center; overflow: hidden; position: relative; }
+    .card-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-cover.no-cover span { font-size: 36px; opacity: .35; }
+    .rating-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,.6);
+      color: var(--gold); font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+
+    .card-body { padding: 11px 13px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+    .card-title { font-size: 15px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; color: var(--gold);
+      background: rgba(255, 212, 121, 0.08); padding: 2px 8px; border-radius: 6px; align-self: flex-start; }
+    .card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .card-meta .chip { padding: 3px 10px; font-size: 12px; cursor: default; }
+    .card-actress { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-date { font-size: 12px; color: var(--text-muted); }
+    .card-actions { display: flex; gap: 8px; border-top: 1px solid var(--border); padding: 8px 13px; }
+    .card-actions .btn { flex: 1; }
+
+    .empty-state { text-align: center; padding: 70px 0; color: var(--text-muted); }
+    .empty-icon { font-size: 50px; margin-bottom: 10px; }
+
+    /* 弹窗 */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex;
+      align-items: center; justify-content: center; z-index: 100; padding: 16px; animation: fadeIn .15s ease; }
+    .modal-overlay[hidden] { display: none; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 16px;
+      width: 100%; max-width: 520px; max-height: 92vh; overflow-y: auto; box-shadow: var(--shadow);
+      animation: slideUp .2s ease; }
+    .modal.wide { max-width: 720px; }
+    @keyframes slideUp { from { transform: translateY(16px); opacity: 0; } to { transform: none; opacity: 1; } }
+    .modal-header { display: flex; align-items: center; justify-content: space-between;
+      padding: 15px 18px; border-bottom: 1px solid var(--border); position: sticky; top: 0;
+      background: var(--bg-elevated); z-index: 2; }
+    .modal-header h2 { font-size: 16px; }
+    .modal-body { padding: 18px; display: flex; flex-direction: column; gap: 15px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 18px;
+      border-top: 1px solid var(--border); position: sticky; bottom: 0; background: var(--bg-elevated); }
+
+    .field { display: flex; flex-direction: column; gap: 6px; }
+    .field label { font-size: 13px; color: var(--text-muted); font-weight: 600; }
+    .field input, .field select, .field textarea { background: var(--card); border: 1px solid var(--border);
+      border-radius: 9px; padding: 10px 12px; color: var(--text); font-size: 14px; outline: none;
+      font-family: inherit; resize: vertical; transition: border-color .15s; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--primary); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+    /* 封面上传区 */
+    .cover-box { display: flex; gap: 14px; align-items: flex-start; }
+    .cover-preview { width: 140px; aspect-ratio: 16/10; border-radius: 10px; overflow: hidden;
+      border: 1px solid var(--border); background: var(--card); display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; }
+    .cover-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .cover-preview span { font-size: 30px; opacity: .35; }
+    .cover-btns { display: flex; flex-direction: column; gap: 8px; }
+
+    /* 标签输入 */
+    .tag-input { background: var(--card); border: 1px solid var(--border); border-radius: 9px;
+      padding: 7px 9px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .tag-input:focus-within { border-color: var(--primary); }
+    .tag-input input { flex: 1; min-width: 90px; background: transparent; border: none; outline: none;
+      color: var(--text); font-size: 14px; padding: 4px; }
+    .tag { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-elevated);
+      border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+    .tag .tag-x { cursor: pointer; color: var(--text-muted); font-weight: 700; font-size: 14px; }
+    .tag .tag-x:hover { color: var(--danger); }
+
+    /* 类别多选 */
+    .cat-select { display: flex; flex-wrap: wrap; gap: 7px; }
+    .cat-select .chip { cursor: pointer; }
+    .cat-select .chip.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .cat-add { display: flex; gap: 8px; margin-top: 8px; }
+    .cat-add input { flex: 1; }
+
+    /* 评分 */
+    .rating-row { display: flex; align-items: center; gap: 12px; }
+    .rating-row input[type=range] { flex: 1; accent-color: var(--primary); }
+    .rating-value { font-size: 18px; font-weight: 700; color: var(--gold); min-width: 42px; text-align: center; }
+
+    /* 裁剪器 */
+    .crop-area { position: relative; width: 100%; overflow: hidden; border-radius: 10px;
+      background: #000; user-select: none; -webkit-user-select: none; }
+    .crop-area img { display: block; width: 100%; pointer-events: none; }
+    .crop-box { position: absolute; border: 2px solid #fff; box-shadow: 0 0 0 2000px rgba(0,0,0,.45);
+      cursor: move; touch-action: none; }
+    .crop-grid { position: absolute; inset: 0; pointer-events: none;
+      background-image: linear-gradient(to right, rgba(255,255,255,.35) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255,255,255,.35) 1px, transparent 1px);
+      background-size: 33.33% 33.33%; }
+    .crop-handle { position: absolute; width: 24px; height: 24px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--primary); touch-action: none; }
+    .crop-handle.h-nw { left: -12px; top: -12px; cursor: nwse-resize; }
+    .crop-handle.h-ne { right: -12px; top: -12px; cursor: nesw-resize; }
+    .crop-handle.h-sw { left: -12px; bottom: -12px; cursor: nesw-resize; }
+    .crop-handle.h-se { right: -12px; bottom: -12px; cursor: nwse-resize; }
+    .crop-hint { font-size: 13px; color: var(--text-muted); text-align: center; }
+    .crop-actions { display: flex; gap: 10px; }
+    .crop-actions .btn { flex: 1; }
+
+    /* 详情 */
+    .detail-cover { width: 100%; max-height: 45vh; object-fit: contain; background: #000;
+      border-radius: 10px; cursor: zoom-in; }
+    .detail-title { font-size: 20px; font-weight: 800; }
+    .detail-code { font-family: "SFMono-Regular", Consolas, monospace; font-size: 16px; color: var(--gold);
+      background: rgba(255, 212, 121, 0.08); padding: 4px 10px; border-radius: 7px; align-self: flex-start; }
+    .detail-section { display: flex; flex-direction: column; gap: 6px; }
+    .detail-section .lbl { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+    .detail-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .detail-tags .tag { cursor: default; }
+    .detail-rating { display: inline-flex; align-items: center; gap: 6px; font-size: 18px; color: var(--gold); font-weight: 700; }
+    .detail-magnet { display: flex; align-items: center; gap: 8px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; }
+    .detail-magnet .magnet-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      direction: rtl; text-align: left; font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; color: var(--text-muted); }
+
+    /* 类别管理 */
+    .add-category { display: flex; gap: 8px; }
+    .add-category input { flex: 1; }
+    .category-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+    .category-item { display: flex; align-items: center; gap: 10px; background: var(--card);
+      border: 1px solid var(--border); border-radius: 9px; padding: 8px 12px; }
+    .category-item .cat-name { flex: 1; font-size: 14px; }
+    .category-item .cat-count { font-size: 12px; color: var(--text-muted); }
+    .category-item input.rename-input { flex: 1; background: var(--bg-elevated); border: 1px solid var(--primary);
+      border-radius: 7px; padding: 5px 8px; color: var(--text); font-size: 14px; outline: none; }
+
+    /* 图片灯箱 */
+    .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,.9); z-index: 300; display: flex;
+      align-items: center; justify-content: center; cursor: zoom-out; }
+    .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .lightbox[hidden] { display: none; }
+
+    .toast { position: fixed; bottom: 34px; left: 50%; transform: translateX(-50%); background: #2a3040;
+      color: var(--text); padding: 10px 20px; border-radius: 999px; font-size: 14px; box-shadow: var(--shadow);
+      z-index: 400; border: 1px solid var(--border); animation: fadeIn .2s ease; max-width: 90vw; }
+    .toast[hidden] { display: none; }
+
+    @media (max-width: 640px) {
+      .brand h1 { font-size: 16px; }
+      .header-actions .btn { padding: 8px 12px; }
+      .field-row { grid-template-columns: 1fr; }
+      .search-box input { width: 110px; }
+      .cover-box { flex-direction: column; }
+      .cover-preview { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon">🎬</span>
+        <h1>视频库</h1>
+        <span class="count" id="videoCount">0 部</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost" id="exportBtn" title="导出备份">导出</button>
+        <button class="btn btn-ghost" id="importBtn" title="导入备份">导入</button>
+        <input type="file" id="importFile" accept=".json,application/json" hidden />
+        <button class="btn btn-primary" id="addVideoBtn">＋ 添加</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="toolbar">
+      <div class="categories" id="categoryBar"></div>
+      <div class="toolbar-right">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="searchInput" placeholder="搜索番号/名称/女优/时间" />
+        </div>
+        <select class="select" id="sortSelect">
+          <option value="created">最新添加</option>
+          <option value="date-desc">时间 新→旧</option>
+          <option value="date-asc">时间 旧→新</option>
+          <option value="rating-desc">评分 高→低</option>
+          <option value="rating-asc">评分 低→高</option>
+        </select>
+        <button class="btn btn-outline" id="manageCategoryBtn">类别</button>
+      </div>
+    </div>
+
+    <div class="video-grid" id="videoGrid"></div>
+    <div class="empty-state" id="emptyState" hidden>
+      <div class="empty-icon">📁</div>
+      <p id="emptyText">还没有视频，点击「添加」开始管理</p>
+    </div>
+  </main>
+
+  <!-- 编辑弹窗 -->
+  <div class="modal-overlay" id="videoModal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="videoModalTitle">添加视频</h2>
+        <button class="icon-btn" data-close="videoModal" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>封面</label>
+          <div class="cover-box">
+            <div class="cover-preview" id="coverPreview"><span>🎞️</span></div>
+            <div class="cover-btns">
+              <button class="btn btn-outline btn-sm" id="coverUploadBtn" type="button">上传/更换封面</button>
+              <button class="btn btn-ghost btn-sm" id="coverRemoveBtn" type="button">移除封面</button>
+            </div>
+          </div>
+          <input type="file" id="coverFileInput" accept="image/*" hidden />
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="codeInput">番号</label>
+            <input type="text" id="codeInput" placeholder="例如：ABC-123" />
+          </div>
+          <div class="field">
+            <label for="nameInput">名称（可选）</label>
+            <input type="text" id="nameInput" placeholder="视频标题" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>女优（可多个）</label>
+          <div class="tag-input" id="actressInputBox">
+            <div class="tags" id="actressList" style="display:contents"></div>
+            <input type="text" id="actressInput" placeholder="输入女优名" />
+            <button class="btn btn-primary btn-sm" id="actressAddBtn" type="button">确认</button>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="studioInput">片商</label>
+            <input type="text" id="studioInput" placeholder="出品方" />
+          </div>
+          <div class="field">
+            <label>个人评分</label>
+            <div class="rating-row">
+              <input type="range" id="ratingInput" min="0" max="10" step="0.5" value="0" />
+              <span class="rating-value" id="ratingValue">未评</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="dateInput">时间（精确到日）</label>
+          <input type="date" id="dateInput" />
+        </div>
+
+        <div class="field">
+          <label>类别（可多选）</label>
+          <div class="cat-select" id="catSelect"></div>
+          <div class="cat-add">
+            <input type="text" id="catNewInput" placeholder="新建类别" />
+            <button class="btn btn-outline btn-sm" id="catNewBtn" type="button">添加</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="magnetInput">磁力链接</label>
+          <textarea id="magnetInput" rows="2" placeholder="magnet:?xt=urn:btih:..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="videoModal" type="button">取消</button>
+        <button class="btn btn-primary" id="saveVideoBtn" type="button">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 裁剪弹窗 -->
+  <div class="modal-overlay" id="cropModal" hidden>
+    <div class="modal wide">
+      <div class="modal-header">
+        <h2>裁剪封面</h2>
+        <button class="icon-btn" data-close="cropModal" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="crop-area" id="cropArea">
+          <img id="cropImage" alt="" draggable="false" />
+          <div class="crop-box" id="cropBox">
+            <div class="crop-grid"></div>
+            <span class="crop-handle h-nw" data-h="nw"></span>
+            <span class="crop-handle h-ne" data-h="ne"></span>
+            <span class="crop-handle h-sw" data-h="sw"></span>
+            <span class="crop-handle h-se" data-h="se"></span>
+          </div>
+        </div>
+        <p class="crop-hint">拖动裁剪框移动，拖动四角调整大小</p>
+        <div class="crop-actions">
+          <button class="btn btn-ghost" id="cropSkipBtn" type="button">用整张图</button>
+          <button class="btn btn-primary" id="cropConfirmBtn" type="button">确认裁剪</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 详情弹窗 -->
+  <div class="modal-overlay" id="detailModal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2>详细信息</h2>
+        <button class="icon-btn" data-close="detailModal" type="button">✕</button>
+      </div>
+      <div class="modal-body" id="detailBody"></div>
+      <div class="modal-footer">
+        <button class="btn btn-danger" id="detailDeleteBtn" type="button">删除</button>
+        <button class="btn btn-outline" id="detailEditBtn" type="button">编辑</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 类别管理弹窗 -->
+  <div class="modal-overlay" id="categoryModal" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2>管理类别</h2>
+        <button class="icon-btn" data-close="categoryModal" type="button">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="add-category">
+          <input type="text" id="newCategoryInput" placeholder="输入新类别，回车添加" />
+          <button class="btn btn-primary" id="addCategoryBtn" type="button">添加</button>
+        </div>
+        <ul class="category-list" id="categoryList"></ul>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" data-close="categoryModal" type="button">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片灯箱 -->
+  <div class="lightbox" id="lightbox" hidden><img id="lightboxImg" alt="" /></div>
+
+  <div class="toast" id="toast" hidden></div>
+
+  <script>
+  (() => {
+    'use strict';
+
+    var STORAGE_KEY = 'videoMasterData_v2';
+    var DEFAULT_CATEGORIES = ['剧情', '动漫', '欧美', '亚洲'];
+    var ALL = '全部';
+    var RATIO = 16 / 10;
+
+    var state = { videos: [], categories: [] };
+    var currentCategory = ALL;
+    var searchQuery = '';
+    var sortBy = 'created';
+
+    // 编辑弹窗临时状态
+    var editingId = null;
+    var tempCoverOriginal = null;
+    var tempCoverThumb = null;
+    var tempActresses = [];
+    var tempCategories = [];
+    var detailId = null;
+
+    // 裁剪状态
+    var crop = { image: null, box: { x: 0, y: 0, w: 0, h: 0 }, displayW: 0, displayH: 0 };
+
+    function $(id) { return document.getElementById(id); }
+
+    // ---------- 工具 ----------
+    function escapeHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function formatDate(d) {
+      if (!d) return '';
+      var p = String(d).split('-');
+      if (p.length === 3) return p[0] + '年' + parseInt(p[1], 10) + '月' + parseInt(p[2], 10) + '日';
+      return String(d);
+    }
+    function uid() {
+      return (window.crypto && crypto.randomUUID && crypto.randomUUID()) ||
+        Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+    }
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+    var toastTimer = null;
+    function showToast(msg) {
+      var t = $('toast');
+      t.textContent = msg;
+      t.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.hidden = true; }, 2000);
+    }
+
+    function copyText(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        return navigator.clipboard.writeText(text).then(function () { return true; }, function () {
+          return fallbackCopy(text);
+        });
+      }
+      return Promise.resolve(fallbackCopy(text));
+    }
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      ta.remove();
+      return ok;
+    }
+
+    // ---------- 存储 ----------
+    function loadState() {
+      try {
+        var raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          var parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.videos) && Array.isArray(parsed.categories)) {
+            state = parsed;
+            return;
+          }
+        }
+      } catch (e) {}
+      state = { videos: [], categories: DEFAULT_CATEGORIES.slice() };
+    }
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        return true;
+      } catch (e) {
+        showToast('存储空间不足，图片可能过大');
+        return false;
+      }
+    }
+
+    // ---------- 图片处理 ----------
+    function readFileAsDataURL(file) {
+      return new Promise(function (resolve, reject) {
+        var reader = new FileReader();
+        reader.onload = function () { resolve(reader.result); };
+        reader.onerror = function () { reject(new Error('读取失败')); };
+        reader.readAsDataURL(file);
+      });
+    }
+    function loadImage(src) {
+      return new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.onload = function () { resolve(img); };
+        img.onerror = function () { reject(new Error('图片加载失败')); };
+        img.src = src;
+      });
+    }
+    function scaleImage(img, maxW, quality) {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      return canvas.toDataURL('image/jpeg', quality);
+    }
+
+    // ---------- 渲染 ----------
+    function renderCategoryBar() {
+      var chips = [ALL].concat(state.categories);
+      $('categoryBar').innerHTML = chips.map(function (c) {
+        return '<span class="chip ' + (c === currentCategory ? 'active' : '') + '" data-cat="' + escapeHtml(c) + '">' + escapeHtml(c) + '</span>';
+      }).join('');
+    }
+
+    function filteredVideos() {
+      var q = searchQuery.trim().toLowerCase();
+      return state.videos.filter(function (v) {
+        var matchCat = currentCategory === ALL || (v.categories || []).indexOf(currentCategory) >= 0;
+        var hay = [v.name, v.code, v.studio, v.date, (v.actresses || []).join(' ')].join(' ').toLowerCase();
+        var matchSearch = !q || hay.indexOf(q) >= 0;
+        return matchCat && matchSearch;
+      });
+    }
+
+    function sortedVideos(list) {
+      var arr = list.slice();
+      function cmpDate(a, b, asc) {
+        var ad = a.date || '', bd = b.date || '';
+        if (!ad && !bd) return 0;
+        if (!ad) return 1;
+        if (!bd) return -1;
+        var r = ad < bd ? -1 : ad > bd ? 1 : 0;
+        return asc ? r : -r;
+      }
+      if (sortBy === 'rating-desc') {
+        arr.sort(function (a, b) { return (b.rating || 0) - (a.rating || 0); });
+      } else if (sortBy === 'rating-asc') {
+        arr.sort(function (a, b) { return (a.rating || 0) - (b.rating || 0); });
+      } else if (sortBy === 'date-asc') {
+        arr.sort(function (a, b) { return cmpDate(a, b, true); });
+      } else if (sortBy === 'date-desc') {
+        arr.sort(function (a, b) { return cmpDate(a, b, false); });
+      } else {
+        arr.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+      }
+      return arr;
+    }
+
+    function cardHTML(v) {
+      var cover = v.coverThumb
+        ? '<img src="' + v.coverThumb + '" alt="" loading="lazy">'
+        : '<span>🎞️</span>';
+      var coverCls = v.coverThumb ? '' : ' no-cover';
+      var rating = (v.rating && v.rating > 0) ? '<span class="rating-badge">★ ' + v.rating.toFixed(1) + '</span>' : '';
+      var cats = (v.categories || []).slice(0, 3).map(function (c) {
+        return '<span class="chip">' + escapeHtml(c) + '</span>';
+      }).join('');
+      var actress = (v.actresses && v.actresses.length) ? '<span class="card-actress">👤 ' + escapeHtml(v.actresses.join(' / ')) + '</span>' : '';
+      var date = v.date ? '<span class="card-date">📅 ' + escapeHtml(v.date) + '</span>' : '';
+      var title = v.name || v.code || '未命名';
+
+      return '<div class="card" data-id="' + v.id + '">' +
+        '<div class="card-cover' + coverCls + '">' + cover + rating + '</div>' +
+        '<div class="card-body">' +
+          '<div class="card-title">' + escapeHtml(title) + '</div>' +
+          (v.code ? '<span class="card-code">' + escapeHtml(v.code) + '</span>' : '') +
+          (cats ? '<div class="card-meta">' + cats + '</div>' : '') +
+          date +
+          actress +
+        '</div>' +
+        '<div class="card-actions">' +
+          '<button class="btn btn-outline btn-sm" data-action="edit" data-id="' + v.id + '">编辑</button>' +
+          '<button class="btn btn-danger btn-sm" data-action="delete" data-id="' + v.id + '">删除</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderVideos() {
+      var list = sortedVideos(filteredVideos());
+      $('videoGrid').innerHTML = list.map(cardHTML).join('');
+      $('videoCount').textContent = state.videos.length + ' 部';
+      var isEmpty = list.length === 0;
+      $('emptyState').hidden = !isEmpty;
+      if (isEmpty) {
+        $('emptyText').textContent = state.videos.length === 0
+          ? '还没有视频，点击「添加」开始管理'
+          : '当前筛选条件下没有视频';
+      }
+    }
+
+    function renderAll() { renderCategoryBar(); renderVideos(); }
+
+    // ---------- 编辑弹窗 ----------
+    function openModal(el) { el.hidden = false; }
+    function closeModal(el) { el.hidden = true; }
+
+    function renderActressTags() {
+      var box = $('actressInputBox');
+      var input = $('actressInput');
+      var holder = document.createElement('span');
+      var chipsHtml = tempActresses.map(function (a) {
+        return '<span class="tag">' + escapeHtml(a) + '<span class="tag-x" data-del="' + escapeHtml(a) + '">×</span></span>';
+      }).join('');
+      var container = box.querySelector('#actressList');
+      container.innerHTML = chipsHtml;
+      container.style.display = 'contents';
+    }
+
+    function renderCatSelect() {
+      $('catSelect').innerHTML = state.categories.map(function (c) {
+        var active = tempCategories.indexOf(c) >= 0;
+        return '<span class="chip ' + (active ? 'active' : '') + '" data-cat="' + escapeHtml(c) + '">' + escapeHtml(c) + '</span>';
+      }).join('') || '<span style="color:var(--text-muted);font-size:13px">暂无类别，可在下方新建</span>';
+    }
+
+    function renderCoverPreview() {
+      var p = $('coverPreview');
+      if (tempCoverThumb) { p.innerHTML = '<img src="' + tempCoverThumb + '" alt="">'; }
+      else { p.innerHTML = '<span>🎞️</span>'; }
+    }
+
+    function openVideoModal(video) {
+      editingId = video ? video.id : null;
+      tempCoverOriginal = video ? (video.coverOriginal || null) : null;
+      tempCoverThumb = video ? (video.coverThumb || null) : null;
+      tempActresses = video && video.actresses ? video.actresses.slice() : [];
+      tempCategories = video && video.categories ? video.categories.slice() : [];
+
+      $('videoModalTitle').textContent = video ? '编辑视频' : '添加视频';
+      $('codeInput').value = video ? (video.code || '') : '';
+      $('nameInput').value = video ? (video.name || '') : '';
+      $('studioInput').value = video ? (video.studio || '') : '';
+      $('dateInput').value = video ? (video.date || '') : '';
+      $('magnetInput').value = video ? (video.magnet || '') : '';
+      var rating = video ? (video.rating || 0) : 0;
+      $('ratingInput').value = rating;
+      updateRatingLabel(rating);
+      renderActressTags();
+      renderCatSelect();
+      renderCoverPreview();
+      openModal($('videoModal'));
+      setTimeout(function () { $('codeInput').focus(); }, 50);
+    }
+
+    function updateRatingLabel(v) {
+      $('ratingValue').textContent = v > 0 ? v.toFixed(1) : '未评';
+    }
+
+    function saveVideo() {
+      var code = $('codeInput').value.trim();
+      var name = $('nameInput').value.trim();
+      var studio = $('studioInput').value.trim();
+      var magnet = $('magnetInput').value.trim();
+      var date = $('dateInput').value;
+      var rating = parseFloat($('ratingInput').value) || 0;
+
+      if (!code && !name && !studio && !magnet && !tempCoverThumb) {
+        showToast('请至少填写一项信息');
+        return;
+      }
+
+      var data = {
+        id: editingId || uid(),
+        name: name,
+        code: code,
+        date: date,
+        actresses: tempActresses.slice(),
+        studio: studio,
+        rating: rating,
+        magnet: magnet,
+        categories: tempCategories.slice(),
+        coverOriginal: tempCoverOriginal,
+        coverThumb: tempCoverThumb,
+        createdAt: editingId ? (state.videos.filter(function (v) { return v.id === editingId; })[0] || {}).createdAt || Date.now() : Date.now()
+      };
+
+      if (editingId) {
+        var idx = state.videos.findIndex(function (v) { return v.id === editingId; });
+        if (idx >= 0) state.videos[idx] = data;
+      } else {
+        state.videos.unshift(data);
+      }
+
+      if (saveState()) {
+        closeModal($('videoModal'));
+        renderAll();
+        showToast(editingId ? '已更新' : '已添加');
+      }
+    }
+
+    function deleteVideo(id) {
+      var v = state.videos.filter(function (x) { return x.id === id; })[0];
+      if (!v) return;
+      if (!confirm('确定删除「' + (v.name || v.code || '未命名') + '」吗？')) return;
+      state.videos = state.videos.filter(function (x) { return x.id !== id; });
+      saveState();
+      renderAll();
+      showToast('已删除');
+    }
+
+    // ---------- 详情弹窗 ----------
+    function openDetail(video) {
+      detailId = video.id;
+      var cats = (video.categories || []).map(function (c) {
+        return '<span class="tag">' + escapeHtml(c) + '</span>';
+      }).join('');
+      var actresses = (video.actresses || []).map(function (a) {
+        return '<span class="tag">' + escapeHtml(a) + '</span>';
+      }).join('');
+      var cover = video.coverOriginal || video.coverThumb;
+
+      var html = '';
+      if (cover) {
+        html += '<img class="detail-cover" id="detailCoverImg" src="' + cover + '" alt="封面">';
+      }
+      html += '<div class="detail-title">' + escapeHtml(video.name || video.code || '未命名') + '</div>';
+      if (video.code) html += '<span class="detail-code">' + escapeHtml(video.code) + '</span>';
+      if (video.rating && video.rating > 0) {
+        html += '<div class="detail-rating">★ ' + video.rating.toFixed(1) + '</div>';
+      }
+      if (video.date) {
+        html += '<div class="detail-section"><span class="lbl">时间</span><div>' + escapeHtml(formatDate(video.date)) + '</div></div>';
+      }
+      if (video.actresses && video.actresses.length) {
+        html += '<div class="detail-section"><span class="lbl">女优</span><div class="detail-tags">' + actresses + '</div></div>';
+      }
+      if (video.studio) {
+        html += '<div class="detail-section"><span class="lbl">片商</span><div>' + escapeHtml(video.studio) + '</div></div>';
+      }
+      if (video.categories && video.categories.length) {
+        html += '<div class="detail-section"><span class="lbl">类别</span><div class="detail-tags">' + cats + '</div></div>';
+      }
+      if (video.magnet) {
+        html += '<div class="detail-section"><span class="lbl">磁力链接</span>' +
+          '<div class="detail-magnet"><span class="magnet-text">' + escapeHtml(video.magnet) + '</span>' +
+          '<button class="btn btn-outline btn-sm" id="detailCopyBtn" type="button">复制</button></div></div>';
+      }
+
+      $('detailBody').innerHTML = html;
+      openModal($('detailModal'));
+    }
+
+    // ---------- 裁剪器 ----------
+    function openCropModal(imageSrc) {
+      crop.image = null;
+      var img = $('cropImage');
+      img.onload = function () {
+        crop.image = img;
+        requestAnimationFrame(function () { requestAnimationFrame(initCropBox); });
+      };
+      img.src = imageSrc;
+      openModal($('cropModal'));
+    }
+
+    function initCropBox() {
+      var img = $('cropImage');
+      crop.displayW = img.clientWidth;
+      crop.displayH = img.clientHeight;
+      if (!crop.displayW || !crop.displayH) { crop.displayW = img.naturalWidth; crop.displayH = img.naturalHeight; }
+      var w = crop.displayW * 0.8;
+      var h = w / RATIO;
+      if (h > crop.displayH) { h = crop.displayH * 0.8; w = h * RATIO; }
+      crop.box = { x: (crop.displayW - w) / 2, y: (crop.displayH - h) / 2, w: w, h: h };
+      applyBox();
+    }
+
+    function applyBox() {
+      var b = $('cropBox');
+      b.style.left = crop.box.x + 'px';
+      b.style.top = crop.box.y + 'px';
+      b.style.width = crop.box.w + 'px';
+      b.style.height = crop.box.h + 'px';
+    }
+
+    function imgRect() {
+      return $('cropImage').getBoundingClientRect();
+    }
+
+    function startCrop(e) {
+      var handle = e.target.getAttribute && e.target.getAttribute('data-h');
+      var mode = handle ? 'resize' : 'move';
+      var startX = e.clientX, startY = e.clientY;
+      var startBox = { x: crop.box.x, y: crop.box.y, w: crop.box.w, h: crop.box.h };
+      var r = imgRect();
+      var offsetX = r.left, offsetY = r.top;
+
+      function move(ev) {
+        var px = ev.clientX - offsetX;
+        var py = ev.clientY - offsetY;
+        if (mode === 'move') {
+          crop.box.x = clamp(startBox.x + (px - startX), 0, crop.displayW - startBox.w);
+          crop.box.y = clamp(startBox.y + (py - startY), 0, crop.displayH - startBox.h);
+        } else {
+          resizeBox(handle, px, py, startBox);
+        }
+        applyBox();
+      }
+      function up() {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+      }
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+      e.preventDefault();
+    }
+
+    function resizeBox(handle, px, py, startBox) {
+      var minW = 50;
+      var newW, newX, newY;
+      var maxW;
+      if (handle === 'se') {
+        maxW = Math.min(crop.displayW - startBox.x, (crop.displayH - startBox.y) * RATIO);
+        newW = clamp(px - startBox.x, minW, maxW);
+        newX = startBox.x; newY = startBox.y;
+      } else if (handle === 'sw') {
+        maxW = Math.min(startBox.x + startBox.w, (crop.displayH - startBox.y) * RATIO);
+        newW = clamp((startBox.x + startBox.w) - px, minW, maxW);
+        newX = (startBox.x + startBox.w) - newW; newY = startBox.y;
+      } else if (handle === 'ne') {
+        maxW = Math.min(crop.displayW - startBox.x, (startBox.y + startBox.h) * RATIO);
+        newW = clamp(px - startBox.x, minW, maxW);
+        newX = startBox.x; newY = (startBox.y + startBox.h) - newW / RATIO;
+      } else {
+        maxW = Math.min(startBox.x + startBox.w, (startBox.y + startBox.h) * RATIO);
+        newW = clamp((startBox.x + startBox.w) - px, minW, maxW);
+        newX = (startBox.x + startBox.w) - newW; newY = (startBox.y + startBox.h) - newW / RATIO;
+      }
+      crop.box = { x: newX, y: newY, w: newW, h: newW / RATIO };
+    }
+
+    function generateThumb() {
+      var img = $('cropImage');
+      var nw = img.naturalWidth, nh = img.naturalHeight;
+      var sx = crop.box.x / crop.displayW * nw;
+      var sy = crop.box.y / crop.displayH * nh;
+      var sw = crop.box.w / crop.displayW * nw;
+      var sh = crop.box.h / crop.displayH * nh;
+      var maxW = 480;
+      var tw = sw, th = sh;
+      if (tw > maxW) { th = th * maxW / tw; tw = maxW; }
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(tw); canvas.height = Math.round(th);
+      canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, Math.round(tw), Math.round(th));
+      return canvas.toDataURL('image/jpeg', 0.82);
+    }
+
+    // ---------- 类别管理 ----------
+    function renderCategoryList() {
+      $('categoryList').innerHTML = state.categories.map(function (c) {
+        var n = state.videos.filter(function (v) { return (v.categories || []).indexOf(c) >= 0; }).length;
+        return '<li class="category-item" data-cat="' + escapeHtml(c) + '">' +
+          '<span class="cat-name">' + escapeHtml(c) + '</span>' +
+          '<span class="cat-count">' + n + ' 部</span>' +
+          '<button class="btn btn-ghost btn-sm" data-action="rename-cat">重命名</button>' +
+          '<button class="btn btn-danger btn-sm" data-action="delete-cat">删除</button>' +
+        '</li>';
+      }).join('') || '<li class="category-item"><span class="cat-name" style="color:var(--text-muted)">暂无类别</span></li>';
+    }
+
+    function addCategory(name) {
+      name = (name || '').trim();
+      if (!name) { showToast('类别名称不能为空'); return; }
+      if (state.categories.indexOf(name) >= 0) { showToast('该类别已存在'); return; }
+      state.categories.push(name);
+      saveState();
+      renderCategoryList();
+      renderCategoryBar();
+    }
+
+    function deleteCategory(name) {
+      var n = state.videos.filter(function (v) { return (v.categories || []).indexOf(name) >= 0; }).length;
+      var msg = n > 0 ? '类别「' + name + '」下有 ' + n + ' 部视频，删除后将从这些视频中移除该类别。确定？' : '确定删除类别「' + name + '」吗？';
+      if (!confirm(msg)) return;
+      state.categories = state.categories.filter(function (c) { return c !== name; });
+      state.videos.forEach(function (v) { v.categories = (v.categories || []).filter(function (c) { return c !== name; }); });
+      if (currentCategory === name) currentCategory = ALL;
+      saveState();
+      renderCategoryList();
+      renderAll();
+    }
+
+    function startRenameCategory(li, name) {
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'rename-input';
+      input.value = name;
+      var nameSpan = li.querySelector('.cat-name');
+      li.replaceChild(input, nameSpan);
+      input.focus();
+      input.select();
+      var done = false;
+      function finish(commit) {
+        if (done) return;
+        done = true;
+        var newName = input.value.trim();
+        if (commit && newName && newName !== name && state.categories.indexOf(newName) < 0) {
+          var idx = state.categories.indexOf(name);
+          if (idx >= 0) state.categories[idx] = newName;
+          state.videos.forEach(function (v) {
+            var arr = v.categories || [];
+            if (arr.indexOf(name) >= 0) { arr[arr.indexOf(name)] = newName; }
+          });
+          if (currentCategory === name) currentCategory = newName;
+          saveState();
+          renderAll();
+        }
+        renderCategoryList();
+      }
+      input.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+        else if (e.key === 'Escape') { finish(false); }
+      });
+      input.addEventListener('blur', function () { finish(true); });
+    }
+
+    // ---------- 导入导出 ----------
+    function exportData() {
+      var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = '视频库备份_' + new Date().toISOString().slice(0, 10) + '.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已导出');
+    }
+    function importData(file) {
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        try {
+          var parsed = JSON.parse(reader.result);
+          if (!parsed || !Array.isArray(parsed.videos) || !Array.isArray(parsed.categories)) {
+            showToast('备份文件格式不正确'); return;
+          }
+          if (!confirm('导入将覆盖当前所有数据，确定继续？')) return;
+          state = { videos: parsed.videos, categories: parsed.categories };
+          currentCategory = ALL; searchQuery = ''; $('searchInput').value = '';
+          saveState(); renderAll(); showToast('导入成功');
+        } catch (e) { showToast('备份文件解析失败'); }
+      };
+      reader.readAsText(file);
+    }
+
+    // ---------- 事件绑定 ----------
+    $('addVideoBtn').addEventListener('click', function () { openVideoModal(null); });
+    $('saveVideoBtn').addEventListener('click', saveVideo);
+
+    $('coverUploadBtn').addEventListener('click', function () { $('coverFileInput').click(); });
+    $('coverRemoveBtn').addEventListener('click', function () {
+      tempCoverOriginal = null; tempCoverThumb = null; renderCoverPreview();
+    });
+    $('coverFileInput').addEventListener('change', function (e) {
+      var file = e.target.files[0];
+      e.target.value = '';
+      if (!file || file.type.indexOf('image/') !== 0) return;
+      readFileAsDataURL(file).then(loadImage).then(function (img) {
+        tempCoverOriginal = scaleImage(img, 1280, 0.8);
+        openCropModal(tempCoverOriginal);
+      }).catch(function () { showToast('封面处理失败'); });
+    });
+
+    // 评分
+    $('ratingInput').addEventListener('input', function (e) {
+      updateRatingLabel(parseFloat(e.target.value) || 0);
+    });
+
+    // 女优标签
+    function addActressFromInput() {
+      var input = $('actressInput');
+      var v = input.value.trim().replace(/,$/, '');
+      if (v && tempActresses.indexOf(v) < 0) { tempActresses.push(v); renderActressTags(); }
+      input.value = '';
+      input.focus();
+    }
+    $('actressInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addActressFromInput();
+      } else if (e.key === 'Backspace' && !e.target.value && tempActresses.length) {
+        tempActresses.pop(); renderActressTags();
+      }
+    });
+    $('actressAddBtn').addEventListener('click', addActressFromInput);
+    $('actressInputBox').addEventListener('click', function (e) {
+      var del = e.target.getAttribute && e.target.getAttribute('data-del');
+      if (del) {
+        tempActresses = tempActresses.filter(function (a) { return a !== del; });
+        renderActressTags();
+      }
+    });
+
+    // 类别多选
+    $('catSelect').addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      var c = chip.dataset.cat;
+      var i = tempCategories.indexOf(c);
+      if (i >= 0) tempCategories.splice(i, 1); else tempCategories.push(c);
+      renderCatSelect();
+    });
+    $('catNewBtn').addEventListener('click', function () {
+      var v = $('catNewInput').value.trim();
+      $('catNewInput').value = '';
+      if (v && state.categories.indexOf(v) < 0) {
+        state.categories.push(v); saveState(); renderCategoryBar(); renderCategoryList();
+      }
+      if (v && tempCategories.indexOf(v) < 0) tempCategories.push(v);
+      renderCatSelect();
+    });
+
+    // 裁剪
+    $('cropBox').addEventListener('pointerdown', startCrop);
+    $('cropConfirmBtn').addEventListener('click', function () {
+      tempCoverThumb = generateThumb();
+      closeModal($('cropModal'));
+      renderCoverPreview();
+      showToast('封面已裁剪');
+    });
+    $('cropSkipBtn').addEventListener('click', function () {
+      loadImage(tempCoverOriginal).then(function (img) {
+        tempCoverThumb = scaleImage(img, 480, 0.82);
+        closeModal($('cropModal'));
+        renderCoverPreview();
+      });
+    });
+
+    // 详情
+    $('detailBody').addEventListener('click', function (e) {
+      if (e.target.id === 'detailCopyBtn') {
+        var v = state.videos.filter(function (x) { return x.id === detailId; })[0];
+        if (v && v.magnet) {
+          copyText(v.magnet).then(function (ok) { showToast(ok ? '磁力链接已复制' : '复制失败'); });
+        }
+      } else if (e.target.id === 'detailCoverImg') {
+        var lb = $('lightbox');
+        $('lightboxImg').src = e.target.src;
+        lb.hidden = false;
+      }
+    });
+    $('detailEditBtn').addEventListener('click', function () {
+      var v = state.videos.filter(function (x) { return x.id === detailId; })[0];
+      closeModal($('detailModal'));
+      if (v) openVideoModal(v);
+    });
+    $('detailDeleteBtn').addEventListener('click', function () {
+      closeModal($('detailModal'));
+      deleteVideo(detailId);
+    });
+    $('lightbox').addEventListener('click', function () { this.hidden = true; });
+
+    // 类别管理
+    $('manageCategoryBtn').addEventListener('click', function () { renderCategoryList(); openModal($('categoryModal')); });
+    $('addCategoryBtn').addEventListener('click', function () {
+      addCategory($('newCategoryInput').value);
+      $('newCategoryInput').value = '';
+    });
+    $('newCategoryInput').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); addCategory($('newCategoryInput').value); $('newCategoryInput').value = ''; }
+    });
+    $('categoryList').addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      var li = btn.closest('.category-item');
+      var name = li.dataset.cat;
+      if (btn.dataset.action === 'rename-cat') startRenameCategory(li, name);
+      else if (btn.dataset.action === 'delete-cat') deleteCategory(name);
+    });
+
+    // 导入导出
+    $('exportBtn').addEventListener('click', exportData);
+    $('importBtn').addEventListener('click', function () { $('importFile').click(); });
+    $('importFile').addEventListener('change', function (e) { importData(e.target.files[0]); e.target.value = ''; });
+
+    // 关闭弹窗
+    document.querySelectorAll('[data-close]').forEach(function (btn) {
+      btn.addEventListener('click', function () { closeModal($(btn.dataset.close)); });
+    });
+    [$('videoModal'), $('cropModal'), $('detailModal'), $('categoryModal')].forEach(function (m) {
+      m.addEventListener('click', function (e) { if (e.target === m) closeModal(m); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        [$('videoModal'), $('cropModal'), $('detailModal'), $('categoryModal')].forEach(function (m) {
+          if (!m.hidden) closeModal(m);
+        });
+        $('lightbox').hidden = true;
+      }
+    });
+
+    // 筛选/排序
+    $('categoryBar').addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      currentCategory = chip.dataset.cat;
+      renderCategoryBar(); renderVideos();
+    });
+    $('searchInput').addEventListener('input', function (e) { searchQuery = e.target.value; renderVideos(); });
+    $('sortSelect').addEventListener('change', function (e) { sortBy = e.target.value; renderVideos(); });
+
+    // 卡片操作
+    $('videoGrid').addEventListener('click', function (e) {
+      var card = e.target.closest('.card');
+      var btn = e.target.closest('[data-action]');
+      if (btn) {
+        var id = btn.dataset.id;
+        if (btn.dataset.action === 'edit') {
+          var v = state.videos.filter(function (x) { return x.id === id; })[0];
+          if (v) openVideoModal(v);
+        } else if (btn.dataset.action === 'delete') {
+          deleteVideo(id);
+        }
+        return;
+      }
+      if (card) {
+        var video = state.videos.filter(function (x) { return x.id === card.dataset.id; })[0];
+        if (video) openDetail(video);
+      }
+    });
+
+    // ---------- 启动 ----------
+    loadState();
+    renderAll();
+  })();
+  </script>
+</body>
+</html>
